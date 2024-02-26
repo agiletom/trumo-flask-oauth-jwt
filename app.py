@@ -104,12 +104,23 @@ def oauth2_callback(provider):
         abort(401)
     email = provider_data['userinfo']['email'](response.json())
 
+    activity_type = "login"
     user = db.users.find_one()
 
     if not user: 
         user = db.users.insert_one({"email": email})
+        activity_type = "signup"
+
+    log_activity(user, activity_type)
 
     return redirect(url_for('index'))
+
+def log_activity(user, activity):
+    db.activity_logs.insert_one({
+        "user_id": user["_id"],
+        "type": activity,
+        "timestamp": datetime.utcnow()
+    })
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=3000)
