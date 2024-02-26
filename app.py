@@ -1,7 +1,10 @@
+import secrets
+from urllib.parse import urlencode
+
 from dotenv import load_dotenv
-from flask import Flask, render_template
-from os import environ as env
+from flask import Flask, redirect, url_for, render_template, session, current_app, abort
 from pymongo import MongoClient
+from os import environ as env
 
 load_dotenv()
 
@@ -40,6 +43,24 @@ db = client[env.get("DATABASE_NAME", "flask-oauth-jwt")]
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/authorize/<provider>')
+def oauth2_authorize(provider):
+    provider_data = current_app.config['OAUTH2_PROVIDERS'].get(provider)
+    if provider_data is None:
+        abort(404)
+
+    session['oauth2_state'] = secrets.token_urlsafe(16)
+
+    qs = urlencode({
+        'client_id': provider_data['client_id'],
+        'redirect_uri': url_for('oauth2_callback', provider=provider, _external=True),
+        'response_type': 'code',
+        'scope': ' '.join(provider_data['scopes']),
+        'state': session['oauth2_state'],
+    })
+
+    return redirect(provider_data['authorize_url'] + '?' + qs)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=3000)
