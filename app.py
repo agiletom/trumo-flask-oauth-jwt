@@ -1,12 +1,14 @@
+import os
 import secrets
 import requests
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for, render_template, flash, session, current_app, request, abort
+from flask import Flask, redirect, url_for, render_template, flash, session, current_app, request, abort, jsonify
 from pymongo import MongoClient
+from datetime import datetime
 from os import environ as env
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import JWTManager, create_access_token
 
 load_dotenv()
 
@@ -41,6 +43,8 @@ app.config['OAUTH2_PROVIDERS'] = {
 DATABASE_PORT = int(env.get("DATABASE_PORT", 27017))
 client = MongoClient(env.get("DATABASE_HOST", "localhost"), DATABASE_PORT)
 db = client[env.get("DATABASE_NAME", "flask-oauth-jwt")]
+
+jwt = JWTManager(app)
 
 @app.route('/')
 def index():
@@ -112,6 +116,11 @@ def oauth2_callback(provider):
         activity_type = "signup"
 
     log_activity(user, activity_type)
+
+    jwt_token = create_access_token(identity=str(user['_id']))
+
+    flash(f'Logged in as {email}.')
+    flash(f'Access token: {jwt_token}')
 
     return redirect(url_for('index'))
 
