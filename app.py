@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 from flask import Flask, render_template
 from os import environ as env
+from pymongo import MongoClient
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -30,6 +32,10 @@ app.config['OAUTH2_PROVIDERS'] = {
         'scopes': ['user:email'],
     },
 }
+
+DATABASE_PORT = int(env.get("DATABASE_PORT", 27017))
+client = MongoClient(env.get("DATABASE_HOST", "localhost"), DATABASE_PORT)
+db = client[env.get("DATABASE_NAME", "flask-oauth-jwt")]
 
 @app.route('/')
 def index():
