@@ -6,9 +6,10 @@ from urllib.parse import urlencode
 from dotenv import load_dotenv
 from flask import Flask, redirect, url_for, render_template, flash, session, current_app, request, abort, jsonify
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 from datetime import datetime
 from os import environ as env
-from flask_jwt_extended import JWTManager, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 load_dotenv()
 
@@ -130,6 +131,20 @@ def log_activity(user, activity):
         "type": activity,
         "timestamp": datetime.utcnow()
     })
+
+@app.route('/activities', methods=['GET'])
+@jwt_required()
+def get_activities():
+    current_user = get_jwt_identity()
+    activities_cursor = db.activity_logs.find({'user_id': ObjectId(current_user)})
+
+    activities = []
+    for activity in activities_cursor:
+        activity['user_id'] = str(activity['user_id'])
+        activity['_id'] = str(activity['_id'])
+        activities.append(activity)
+
+    return jsonify(activities)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=3000)
